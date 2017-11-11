@@ -46,5 +46,11 @@ public enum Events
     /// <summary>Dispatched when the ultimate attack animation ends.</summary>
     ON_ULTIMATE_EXIT,
 
+    /// <summary>Dispatched when punch hits enemy.</summary>
+    ON_HIT,
+
+    /// <summary>Dispatched when a change in life has happened.</summary>
+    ON_LIFE_UPDATE,
+
     NONE
 }

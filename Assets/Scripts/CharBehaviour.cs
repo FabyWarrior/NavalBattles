@@ -6,6 +6,7 @@ public class CharBehaviour : MonoBehaviour
 {
 
     private Animator _anim;
+    private Transform _enemy;
     private Rigidbody2D _rigid;
     private SpriteRenderer _sprite;
     private GameObject _aura;
@@ -17,10 +18,30 @@ public class CharBehaviour : MonoBehaviour
     private bool _ultimateEnabled;
     private float _horizontal;
     private float _vertical;
+    private float _life;
 
     public float speed;
     public float jumpForce;
+    public float maxLife;
+    public float damage;
+    public float hitDistance;
+    public float knockBackForce;
     public bool isGamepad;
+
+    public float Life
+    {
+        set
+        {
+            if (_life - value <= 0)
+            {
+                _life = 0;
+                Destroy(this.gameObject);
+            } 
+            else _life -= value;
+        }
+
+        get { return _life; }
+    }
 
     void Start()
     {
@@ -46,6 +67,9 @@ public class CharBehaviour : MonoBehaviour
         _rigid = this.GetComponent<Rigidbody2D>();
         _sprite = this.GetComponent<SpriteRenderer>();
         _aura = this.transform.Find("Aura").gameObject;
+        _enemy = this.gameObject.name == "Char" ? GameObject.Find("Char2").transform : GameObject.Find("Char").transform;
+
+        _life = maxLife;
     }
 
     /// <summary>Adds all the event listeners.</summary>
@@ -53,6 +77,7 @@ public class CharBehaviour : MonoBehaviour
     {
         EventManager.AddEventListener(Events.ON_ATTACK_EXIT, OnAttackExit);
         EventManager.AddEventListener(Events.ON_ULTIMATE_EXIT, OnUltimateExit);
+        EventManager.AddEventListener(Events.ON_HIT, OnHit);
     }
 
     /// <summary>Checks inputs from the keyboard.</summary>
@@ -235,6 +260,11 @@ public class CharBehaviour : MonoBehaviour
         _isPunching = true;
         _anim.SetBool("punch", _isPunching);
         if (!_isJumping) _rigid.velocity = Vector3.zero;
+
+        var dir = _enemy.position - this.transform.position;
+
+        if (Vector2.SqrMagnitude(dir) <= hitDistance)
+            EventManager.DispatchEvent(Events.ON_HIT, new object[] { this.gameObject.name, damage, knockBackForce });
     }
 
     /// <summary>Makes the character to execute it's ultimate attack.</summary>
@@ -265,5 +295,16 @@ public class CharBehaviour : MonoBehaviour
     private void OnUltimateExit(params object[] paramsContainer)
     {
         _isUlting = false;
+    }
+
+    private void OnHit(params object[] paramsContainer)
+    {
+        if(this.gameObject.name != (string)paramsContainer[0])
+        {
+            Life = (float)paramsContainer[1];
+            EventManager.DispatchEvent(Events.ON_LIFE_UPDATE, new object[] { this.gameObject.name, Life/maxLife });
+            var dir = -(_enemy.position - this.transform.position).normalized;
+            _rigid.AddForce(dir * (float)paramsContainer[2] * Time.deltaTime, ForceMode2D.Impulse);
+        }
     }
 }
